@@ -1,1 +1,4 @@
 fdk>=0.1.66
+oci
+pandas>=2.0.0
+datetime

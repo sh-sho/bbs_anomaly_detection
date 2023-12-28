@@ -16,6 +16,7 @@ def anomaly_detect(logs):
     ### functions
     signer = oci.auth.signers.get_resource_principals_signer()
     ad_client = AnomalyDetectionClient(config={}, signer=signer)
+    logging.getLogger().info(logs)
     
     # ### api key
     # CONFIG_FILENAME = "/Users/USERNAME/.oci/config"
@@ -36,13 +37,22 @@ def anomaly_detect(logs):
     signalNames = ["temperature_1", "temperature_2", "temperature_3", "temperature_4", "temperature_5", "pressure_1", "pressure_2", "pressure_3", "pressure_4", "pressure_5"]
     df = pd.DataFrame()
     
-    for i in range(num_rows):
-        values_str = logs[i]['value']
-        values_dict = json.loads(values_str)
-        df_timestamp = pd.DataFrame(data = [values_dict['timestamp']], columns=timeName)
-        df_values = pd.DataFrame(data = [values_dict['values']], columns=signalNames)
-        df_cell = pd.concat([df_timestamp, df_values], axis=1)
-        df = pd.concat([df, df_cell], axis=0)
+    values_str = logs[0]['value']
+    values_dict = json.loads(values_str)
+    logging.getLogger().info(values_dict)
+    value_time = values_dict['timestamp']
+    logging.getLogger().info(value_time)
+    df_timestamp = pd.DataFrame(data = [values_dict['timestamp']], columns=timeName)
+    logging.getLogger().info('OKOK')
+    value_temp = values_dict['values']
+    df_values = pd.DataFrame(data = [values_dict['values']], columns=signalNames)
+    
+    df_cell = pd.concat([df_timestamp, df_values], axis=1)
+    df = pd.concat([df, df_cell], axis=0)
+    
+    logging.getLogger().info('df ok')
+    df['timestamp'] = df['timestamp'].apply(lambda x: x.strftime('%Y-%m-%dT%H:%M:%SZ'))
+    logging.getLogger().info('timestamp ok')
     
     logging.getLogger().info(df)
     inline = InlineDetectAnomaliesRequest(model_id=model_id, request_type="INLINE", signal_names=signalNames, data=df)
@@ -79,7 +89,6 @@ def handler(ctx, data: io.BytesIO = None):
     message_result = "Success"
     try:
         logs = json.loads(data.getvalue())
-        
         for item in logs:
             if 'value' in item:
                 item['value'] = base64_decode(item['value'])
@@ -87,7 +96,7 @@ def handler(ctx, data: io.BytesIO = None):
             if 'key' in item:
                 item['key'] = base64_decode(item['key'])
         
-        
+        logging.getLogger().info(item['value'])
         result = anomaly_detect(logs)
         logging.getLogger().info(result.data)
         # tmp = {"result":result}
