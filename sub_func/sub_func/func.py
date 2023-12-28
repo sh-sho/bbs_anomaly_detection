@@ -5,18 +5,18 @@ from fdk import response
 import pandas as pd
 from datetime import datetime, date, timedelta 
 import time
-# import random
 import base64
 import os
 import oci
 from oci.ai_anomaly_detection.models import *
 from oci.ai_anomaly_detection.anomaly_detection_client import AnomalyDetectionClient
 
-def anomaly_detect(logs):
+### anomaly_detection
+def anomaly_detect(logs_value):
     ### functions
     signer = oci.auth.signers.get_resource_principals_signer()
     ad_client = AnomalyDetectionClient(config={}, signer=signer)
-    logging.getLogger().info(logs)
+    logging.getLogger().info(logs_value)
     
     # ### api key
     # CONFIG_FILENAME = "/Users/USERNAME/.oci/config"
@@ -37,25 +37,31 @@ def anomaly_detect(logs):
     signalNames = ["temperature_1", "temperature_2", "temperature_3", "temperature_4", "temperature_5", "pressure_1", "pressure_2", "pressure_3", "pressure_4", "pressure_5"]
     df = pd.DataFrame()
     
-    values_str = logs[0]['value']
-    values_dict = json.loads(values_str)
-    logging.getLogger().info(values_dict)
-    value_time = values_dict['timestamp']
+    # values_str = logs_value[0]['value']
+    values_dict = json.loads(logs_value)
+    logging.getLogger().debug(values_dict)
+    value_time = values_dict[0]['timestamp']
     logging.getLogger().info(value_time)
-    df_timestamp = pd.DataFrame(data = [values_dict['timestamp']], columns=timeName)
-    logging.getLogger().info('OKOK')
-    value_temp = values_dict['values']
-    df_values = pd.DataFrame(data = [values_dict['values']], columns=signalNames)
+    df_timestamp = pd.DataFrame(data = [values_dict[0]['timestamp']], columns=timeName)
+    df_values = pd.DataFrame(data = [values_dict[0]['values']], columns=signalNames)
     
     df_cell = pd.concat([df_timestamp, df_values], axis=1)
     df = pd.concat([df, df_cell], axis=0)
     
     logging.getLogger().info('df ok')
-    df['timestamp'] = df['timestamp'].apply(lambda x: x.strftime('%Y-%m-%dT%H:%M:%SZ'))
+    # df['timestamp'] = df['timestamp'].apply(lambda x: x.strftime('%Y-%m-%dT%H:%M:%SZ'))
     logging.getLogger().info('timestamp ok')
     
-    logging.getLogger().info(df)
-    inline = InlineDetectAnomaliesRequest(model_id=model_id, request_type="INLINE", signal_names=signalNames, data=df)
+    # Now create the Payload from the dataframe
+    payloadData = []
+    for index, row in df.iterrows():
+        timestamp = datetime.strptime(row['timestamp'], "%Y-%m-%dT%H:%M:%SZ")
+        values = list(row[signalNames])
+        dItem = DataItem(timestamp=timestamp, values=values)
+        payloadData.append(dItem)
+    
+    logging.getLogger().info(df.head())
+    inline = InlineDetectAnomaliesRequest(model_id=model_id, request_type="INLINE", signal_names=signalNames, data=payloadData)
     detect_res = ad_client.detect_anomalies(detect_anomalies_details=inline)
     return detect_res
 
@@ -97,13 +103,8 @@ def handler(ctx, data: io.BytesIO = None):
                 item['key'] = base64_decode(item['key'])
         
         logging.getLogger().info(item['value'])
-        result = anomaly_detect(logs)
+        result = anomaly_detect(item['value'])
         logging.getLogger().info(result.data)
-        # tmp = {"result":result}
-        # print(result.data)
-        # if values != None:
-            # message_result = logs[0]['values']
-        #     # message_result = logs['data'][0]['value']
         
         if result.data != None:
             notification()
@@ -113,7 +114,6 @@ def handler(ctx, data: io.BytesIO = None):
         logging.getLogger().info('error parsing json payload: ' + str(ex))
         message_result = "error"
         raise
-    # logging.getLogger().info("Got incoming request")
     
     return response.Response(ctx, response_data=json.dumps({"status": message_result}), headers={"Content-Type": "application/json"})
     
