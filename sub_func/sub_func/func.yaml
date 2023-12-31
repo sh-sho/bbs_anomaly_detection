@@ -1,6 +1,6 @@
 schema_version: 20180708
 name: sub_func
-version: 0.0.111
+version: 0.0.112
 runtime: python
 build_image: fnproject/python:3.9-dev
 run_image: fnproject/python:3.9
