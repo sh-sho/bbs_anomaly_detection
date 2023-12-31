@@ -6,7 +6,6 @@ from fdk import response
 import oci
 from base64 import b64encode 
 from datetime import datetime, timezone
-import time
 
 
 ociMessageEndpoint = "https://cell-1.streaming.us-phoenix-1.oci.oraclecloud.com"  
@@ -47,7 +46,7 @@ def produce_messages(pub_data, client, stream_id, i):
             print("Published message to partition {} , offset {}".format(entry.partition, entry.offset))
 
 def edit_data(values):
-    # timestampを追加
+    # timestamp
     timestamp_value = datetime.now(timezone.utc)
     values[0]["timestamp"] = timestamp_value.strftime('%Y-%m-%dT%H:%M:%SZ')
     return values
