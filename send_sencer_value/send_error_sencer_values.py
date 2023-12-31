@@ -16,7 +16,7 @@ config = oci.config.from_file('~/.oci/config')
 
 
 
-json_file_path = "/home/opc/bbs_anomaly_detection/data/normal_data"
+json_file_path = "/home/opc/bbs_anomaly_detection/data/error_data"
 json_files = [f for f in os.listdir(json_file_path) if f.endswith('.json')]
 
 for file_name in json_files:

@@ -16,7 +16,7 @@ def anomaly_detect(logs_value):
     ### functions
     signer = oci.auth.signers.get_resource_principals_signer()
     ad_client = AnomalyDetectionClient(config={}, signer=signer)
-    logging.getLogger().info(logs_value)
+    # logging.getLogger().info(logs_value)
     
     # ### api key
     # CONFIG_FILENAME = "/Users/USERNAME/.oci/config"
@@ -39,16 +39,16 @@ def anomaly_detect(logs_value):
     
     # values_str = logs_value[0]['value']
     values_dict = json.loads(logs_value)
-    logging.getLogger().debug(values_dict)
+    # logging.getLogger().debug(values_dict)
     value_time = values_dict[0]['timestamp']
-    logging.getLogger().info(value_time)
+    # logging.getLogger().info(value_time)
     df_timestamp = pd.DataFrame(data = [values_dict[0]['timestamp']], columns=timeName)
     df_values = pd.DataFrame(data = [values_dict[0]['values']], columns=signalNames)
     
     df_cell = pd.concat([df_timestamp, df_values], axis=1)
     df = pd.concat([df, df_cell], axis=0)
     
-    logging.getLogger().info('df ok')
+    # logging.getLogger().info('df ok')
     # df['timestamp'] = df['timestamp'].apply(lambda x: x.strftime('%Y-%m-%dT%H:%M:%SZ'))
     logging.getLogger().info('timestamp ok')
     
@@ -60,9 +60,10 @@ def anomaly_detect(logs_value):
         dItem = DataItem(timestamp=timestamp, values=values)
         payloadData.append(dItem)
     
-    logging.getLogger().info(df.head())
+    # logging.getLogger().info(df.head())
     inline = InlineDetectAnomaliesRequest(model_id=model_id, request_type="INLINE", signal_names=signalNames, data=payloadData)
     detect_res = ad_client.detect_anomalies(detect_anomalies_details=inline)
+    logging.getLogger().info('anomaly ok')
     return detect_res
 
 ### notification
@@ -92,28 +93,66 @@ def base64_decode(encoded):
     return message_bytes.decode('utf-8')
 
 def handler(ctx, data: io.BytesIO = None):
-    message_result = "Success"
+    
     try:
         logs = json.loads(data.getvalue())
+        result_detect = []
         for item in logs:
             if 'value' in item:
                 item['value'] = base64_decode(item['value'])
 
             if 'key' in item:
                 item['key'] = base64_decode(item['key'])
+            
+            result = anomaly_detect(item['value'])
+            result_str = str(result.data)
+            result_value = json.loads(result_str)
+            result_detect.append(result_value['detection_results'])
         
-        logging.getLogger().info(item['value'])
-        result = anomaly_detect(item['value'])
-        logging.getLogger().info(result.data)
+        logging.getLogger().info(result_detect)
+        for i in range(len(result_detect)):
+            if not result_detect[i]:
+                message_result = "No Anomalies"
+                logging.getLogger().info("No Anomalies")
+                
+            else:
+                if 'anomalies' in result_detect[i][0]:
+                    notification()
+                    message_result = "Notificated"
+                    logging.getLogger().info("AD Notificatied")
+                else:
+                    message_result = "No Anomalies"
+                
         
-        if result.data != None:
-            notification()
-            message_result = "Notificated"
+        # logging.getLogger().info(logs[0]['value'])
+        # logging.getLogger().info(len(logs))
+        # # logging.getLogger().info(type(item['value']))
+        
+        # result = anomaly_detect(item['value'])
+        
+        # result_str = str(result.data)
+        # # logging.getLogger().info(type(result_str))
+        # # logging.getLogger().info(result_str)
+        # result_value = json.loads(result_str)
+        # # logging.getLogger().info(result_value)
+        # # logging.getLogger().info(result_value['detection_results'])
+        # result_detect = result_value['detection_results']
+        
+        # if not result_detect:
+        #     message_result = "No Anomalies"
+        # else:
+        #     if 'anomalies' in result_detect[0]:
+        #         notification()
+        #         message_result = "Notificated"
+        #     else:
+        #         message_result = "No Anomalies"
+        
+            
             
     except (Exception, ValueError) as ex:
         logging.getLogger().info('error parsing json payload: ' + str(ex))
         message_result = "error"
         raise
-    
+    logging.getLogger().info(message_result)
     return response.Response(ctx, response_data=json.dumps({"status": message_result}), headers={"Content-Type": "application/json"})
     
