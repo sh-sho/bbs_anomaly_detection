@@ -55,8 +55,9 @@ def notification():
     # notificationClient = oci.ons.NotificationDataPlaneClient(config)
     # ### end api key
     
+    
     topic_ocid = "ocid1.onstopic.oc1.phx.amaaaaaassl65iqa26skdp5ee2w6jn7zrja7pxqbvqlvf2roy3lom4qki63a"
-    bodyMessage = "An anomaly has been detected in your system."
+    bodyMessage = "センサーから異常を検知しました。ただちに確認を行ってください。"
     notificationMessage = {"default": "Anomaly Detection", "body": bodyMessage, "title": "Notification of Anomaly Detection."}   
     notificationClient.publish_message(topic_ocid, notificationMessage)
  
