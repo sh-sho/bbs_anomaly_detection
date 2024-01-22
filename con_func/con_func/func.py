@@ -9,18 +9,24 @@ import oci
 from oci.ai_anomaly_detection.models import *
 from oci.ai_anomaly_detection.anomaly_detection_client import AnomalyDetectionClient
 
-### anomaly_detection
-def anomaly_detect(logs_value):
-    ### functions
-    signer = oci.auth.signers.get_resource_principals_signer()
-    ad_client = AnomalyDetectionClient(config={}, signer=signer)
-    
-    # ### api key
+
+### functions
+signer = oci.auth.signers.get_resource_principals_signer()
+ad_client = AnomalyDetectionClient(config={}, signer=signer)
+notification_client = oci.ons.NotificationDataPlaneClient(config={}, signer=signer)
+
+ # ### api key
     # config = oci.config.from_file('~/.oci/config')
     # ad_client = AnomalyDetectionClient(config,service_endpoint=SERVICE_ENDPOINT)
+    # notificationClient = oci.ons.NotificationDataPlaneClient(config)
     # ### end api key
+
+model_id = 'ocid1.aianomalydetectionmodel.oc1.phx.amaaaaaassl65iqaconi4dxm3imsy2ixv6fgxfod6npia4euvl3kntlhhu5a'
+topic_ocid = "ocid1.onstopic.oc1.phx.amaaaaaassl65iqa26skdp5ee2w6jn7zrja7pxqbvqlvf2roy3lom4qki63a"
+
+### anomaly_detection
+def anomaly_detect(logs_value):
     
-    model_id = 'ocid1.aianomalydetectionmodel.oc1.phx.amaaaaaassl65iqaconi4dxm3imsy2ixv6fgxfod6npia4euvl3kntlhhu5a'
     timeName = ["timestamp"]
     signalNames = ["temperature_1", "temperature_2", "temperature_3", "temperature_4", "temperature_5", "pressure_1", "pressure_2", "pressure_3", "pressure_4", "pressure_5"]
     df = pd.DataFrame()
@@ -31,7 +37,6 @@ def anomaly_detect(logs_value):
     df_cell = pd.concat([df_timestamp, df_values], axis=1)
     df = pd.concat([df, df_cell], axis=0)
     
-    # Now create the Payload from the dataframe
     payloadData = []
     for index, row in df.iterrows():
         timestamp = datetime.strptime(row['timestamp'], "%Y-%m-%dT%H:%M:%SZ")
@@ -44,22 +49,16 @@ def anomaly_detect(logs_value):
     return detect_res
 
 ### notification
-def notification():
-    ### resource principal
-    signer = oci.auth.signers.get_resource_principals_signer()
-    notificationClient = oci.ons.NotificationDataPlaneClient(config={}, signer=signer)
-    ### end resource principal
+def error_notifications(result_str):
+    bodyMessage = "センサーから異常を検知しました。"
+    notificationMessage = {"default": "Anomaly Detection", "body": bodyMessage + "\n" + result_str, "title": "異常検出時の通知"}   
+    notification_client.publish_message(topic_ocid, notificationMessage)
     
-    # ### api key
-    # config = oci.config.from_file('~/.oci/config')
-    # notificationClient = oci.ons.NotificationDataPlaneClient(config)
-    # ### end api key
+def normal_notifications(result_str):
+    bodyMessage = "センサーのデータは正常です。"
+    notificationMessage = {"default": "Anomaly Detection", "body": bodyMessage + "\n" + result_str, "title": "センサーデータが正常時の通知"}   
+    notification_client.publish_message(topic_ocid, notificationMessage)
     
-    
-    topic_ocid = "ocid1.onstopic.oc1.phx.amaaaaaassl65iqa26skdp5ee2w6jn7zrja7pxqbvqlvf2roy3lom4qki63a"
-    bodyMessage = "センサーから異常を検知しました。ただちに確認を行ってください。"
-    notificationMessage = {"default": "Anomaly Detection", "body": bodyMessage, "title": "Notification of Anomaly Detection."}   
-    notificationClient.publish_message(topic_ocid, notificationMessage)
  
 def base64_decode(encoded):
     print(type(encoded))
@@ -71,8 +70,8 @@ def handler(ctx, data: io.BytesIO = None):
     
     try:
         logs = json.loads(data.getvalue())
-        result_detect = []
         for item in logs:
+            result_detect = []
             if 'value' in item:
                 item['value'] = base64_decode(item['value'])
 
@@ -84,6 +83,8 @@ def handler(ctx, data: io.BytesIO = None):
             result_value = json.loads(result_str)
             result_detect.append(result_value['detection_results'])
         
+        logging.getLogger().info(result_str)
+        
         for i in range(len(result_detect)):
             if not result_detect[i]:
                 message_result = "No Anomalies"
@@ -91,12 +92,15 @@ def handler(ctx, data: io.BytesIO = None):
                 
             else:
                 if 'anomalies' in result_detect[i][0]:
-                    notification()
+                    error_notifications(result_str)
                     message_result = "Notificated"
                     logging.getLogger().info("AD Notificatied")
                 else:
                     message_result = "No Anomalies"
-                    
+    
+        if message_result == "No Anomalies":
+            normal_notifications(result_str)
+                
     except (Exception, ValueError) as ex:
         logging.getLogger().info('error parsing json payload: ' + str(ex))
         message_result = "error"
