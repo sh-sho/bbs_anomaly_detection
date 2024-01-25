@@ -93,7 +93,6 @@ def handler(ctx, data: io.BytesIO = None):
                 
             else:
                 if 'anomalies' in result_detect[i][0]:
-                    error_notifications(result_str)
                     message_result = "Notificated"
                     logging.getLogger().info("AD Notificatied")
                 else:
@@ -101,6 +100,8 @@ def handler(ctx, data: io.BytesIO = None):
     
         if message_result == "No Anomalies":
             normal_notifications(result_str)
+        elif message_result == "Notificated":
+            error_notifications(result_str)
                 
     except (Exception, ValueError) as ex:
         logging.getLogger().info('error parsing json payload: ' + str(ex))
