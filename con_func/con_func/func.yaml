@@ -1,8 +1,11 @@
 schema_version: 20180708
 name: con_func
-version: 0.0.23
+version: 0.0.26
 runtime: python
 build_image: fnproject/python:3.9-dev
 run_image: fnproject/python:3.9
 entrypoint: /python/bin/fdk /function/func.py handler
 memory: 256
+config:
+  MODEL_OCID: ocid1.aianomalydetectionmodel.oc1.phx.amaaaaaassl65iqaconi4dxm3imsy2ixv6fgxfod6npia4euvl3kntlhhu5a
+  TOPIC_OCID: ocid1.onstopic.oc1.phx.amaaaaaassl65iqa26skdp5ee2w6jn7zrja7pxqbvqlvf2roy3lom4qki63a

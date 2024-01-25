@@ -1,3 +1,4 @@
+import os
 import io
 import json
 import logging
@@ -21,8 +22,8 @@ notification_client = oci.ons.NotificationDataPlaneClient(config={}, signer=sign
     # notificationClient = oci.ons.NotificationDataPlaneClient(config)
     # ### end api key
 
-model_id = 'ocid1.aianomalydetectionmodel.oc1.phx.amaaaaaassl65iqaconi4dxm3imsy2ixv6fgxfod6npia4euvl3kntlhhu5a'
-topic_ocid = "ocid1.onstopic.oc1.phx.amaaaaaassl65iqa26skdp5ee2w6jn7zrja7pxqbvqlvf2roy3lom4qki63a"
+model_id = os.getenv("MODEL_OCID")
+topic_ocid = os.getenv("TOPIC_OCID")
 
 ### anomaly_detection
 def anomaly_detect(logs_value):
