@@ -12,14 +12,12 @@ config = oci.config.from_file('~/.oci/config')
 
 stream_client = oci.streaming.StreamClient(config=config, service_endpoint=ociMessageEndpoint)
 
-json_file_path = "/home/opc/bbs_anomaly_detection/data/normal_data"
+json_file_path = '../data/normal_data'
 json_files = [f for f in os.listdir(json_file_path) if f.endswith('.json')]
 
 def produce_messages(pub_data, client, stream_id, i):
-    # Build up a PutMessagesDetails and publish some messages to the stream
     message_list = []
     key = "messageKey" + str(i)
-    #   data_bytes = bytes(data, 'utf-8')
     value = json.dumps(pub_data)
     encoded_key = b64encode(key.encode()).decode()
     encoded_value = b64encode(value.encode()).decode()
@@ -29,7 +27,6 @@ def produce_messages(pub_data, client, stream_id, i):
     messages = oci.streaming.models.PutMessagesDetails(messages=message_list)
     put_message_result = client.put_messages(stream_id, messages)
     
-    # The put_message_result can contain some useful metadata for handling failures
     for entry in put_message_result.data.entries:
         if entry.error:
             print("Error ({}) : {}".format(entry.error, entry.error_message))
@@ -38,14 +35,12 @@ def produce_messages(pub_data, client, stream_id, i):
     time.sleep(1)
 
 def edit_data(values):
-    # timestamp
     timestamp_value = datetime.now(timezone.utc)
     values[0]["timestamp"] = timestamp_value.strftime('%Y-%m-%dT%H:%M:%SZ')
     return values
 
 for file_name in json_files:
     file_path = os.path.join(json_file_path, file_name)
-    # print(file_path)
     
     with open(file_path, 'r') as json_file:
         stream_body = json_file.read()
@@ -53,7 +48,3 @@ for file_name in json_files:
     produce_messages(pub_data, stream_client, ociStreamOcid, 1)
     print(pub_data)
     
-
-
-
-
