@@ -159,8 +159,8 @@ cython_debug/
 #  option (not recommended) you can uncomment the following to ignore the entire idea folder.
 #.idea/
 
-temp_files
-send_sencer_value
-pub_func
-training_model
-con_func/con_func/func.yaml
+temp_files/
+send_sencer_value/
+pub_func/
+training_model/
+func.yaml
