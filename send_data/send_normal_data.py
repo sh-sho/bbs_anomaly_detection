@@ -5,12 +5,15 @@ from datetime import datetime, timezone
 import time
 import oci
 from oci.functions import *
+from dotenv import load_dotenv
 
-ociMessageEndpoint = "https://cell-1.streaming.us-phoenix-1.oci.oraclecloud.com"  
-ociStreamOcid = "ocid1.stream.oc1.phx.amaaaaaassl65iqap5ath7yuo7q6foymcme6omvrhprcgdwmk7zldsxsp5ea"  
+load_dotenv()
+
+message_endpoint = "https://cell-1.streaming.us-phoenix-1.oci.oraclecloud.com"  
+stream_ocid = os.getenv('stream_ocid') 
 config = oci.config.from_file('~/.oci/config')
 
-stream_client = oci.streaming.StreamClient(config=config, service_endpoint=ociMessageEndpoint)
+stream_client = oci.streaming.StreamClient(config=config, service_endpoint=message_endpoint)
 
 json_file_path = '../data/normal_data'
 json_files = [f for f in os.listdir(json_file_path) if f.endswith('.json')]
@@ -45,6 +48,6 @@ for file_name in json_files:
     with open(file_path, 'r') as json_file:
         stream_body = json_file.read()
     pub_data = edit_data(json.loads(stream_body))
-    produce_messages(pub_data, stream_client, ociStreamOcid, 1)
+    produce_messages(pub_data, stream_client, stream_ocid, 1)
     print(pub_data)
     
