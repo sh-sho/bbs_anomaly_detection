@@ -9,7 +9,7 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-message_endpoint = "https://cell-1.streaming.us-phoenix-1.oci.oraclecloud.com"  
+message_endpoint = os.getenv('message_endpoint')  
 stream_ocid = os.getenv('stream_ocid') 
 config = oci.config.from_file('~/.oci/config')
 
